@@ -1,18 +1,18 @@
-
+use crate::ieee754::fheint32_to_ieee754;
 use crate::{
     structs::AppState, 
     model::PlaintextDistances,
     model::CiphertextDistances,
     schema::PlaintextCoordinatesSchema,
     schema::CiphertextCoordinatesSchema,
+    ieee754::u32_to_ieee754_2nd,
 };
 
 use actix_web::{get, post, delete, web, HttpResponse, Responder};
-use diesel::IntoSql;
 use serde_json::json;
-
+use bincode::{serialize, deserialize};
 use tfhe::prelude::*;
-use tfhe::{FheInt32, FheUint8};
+use tfhe::FheInt32;
 
 // ----------------------
 // |    Health Check    |
@@ -151,30 +151,38 @@ async fn test_calculate_distance(
     body: web::Json<PlaintextCoordinatesSchema>,
     data: web::Data<AppState>,
 ) -> impl Responder {
-
     // TODO: this should be done on the client's side
     // Validate the incoming data
-    if body.coordinate_a.x < 0 || body.coordinate_a.y < 0 || body.coordinate_b.x < 0 || body.coordinate_b.y < 0 {
-        return HttpResponse::BadRequest().json(json!({
-            "status": "error",
-            "message": "Invalid input. Values must be greater than or equal to 0."}
-        ));
-    }
+    // if body.coordinate_a.x < 0 || body.coordinate_a.y < 0 || body.coordinate_b.x < 0 || body.coordinate_b.y < 0 {
+    //     return HttpResponse::BadRequest().json(json!({
+    //         "status": "error",
+    //         "message": "Invalid input. Values must be greater than or equal to 0."}
+    //     ));
+    // }
+
+    // Unwrap the Vector of bytes into 4 byte array and convert into a i32
+    let pax: i32 = deserialize(&body.coordinate_a.x).unwrap();
+    let pay: i32 = deserialize(&body.coordinate_a.y).unwrap();
+    let pbx: i32 = deserialize(&body.coordinate_b.x).unwrap();
+    let pby: i32 = deserialize(&body.coordinate_b.y).unwrap();
 
     // Select max and min from coordinates
-    let x1: i32 = std::cmp::max(body.coordinate_a.x, body.coordinate_b.x);
-    let x2: i32 = std::cmp::min(body.coordinate_a.x, body.coordinate_b.x);
-    let y1: i32 = std::cmp::max(body.coordinate_a.y, body.coordinate_b.y);
-    let y2: i32 = std::cmp::min(body.coordinate_a.y, body.coordinate_b.y);
+    let x1: i32 = std::cmp::max(pax, pbx);
+    let x2: i32 = std::cmp::min(pax, pbx);
+    let y1: i32 = std::cmp::max(pay, pby);
+    let y2: i32 = std::cmp::min(pay, pby);
 
     // Compute the radicand
-    let radicand = (x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1);
+    let radicand: i32 = (x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1);
+
+    // Serialize the radicand
+    let rs: Vec<u8> = serialize(&radicand).unwrap();
 
     // Search for the radicand
     let query_result = sqlx::query_as!(
         PlaintextDistances,
         "SELECT id, distance FROM plaintextdistances WHERE id = $1",
-        radicand
+        rs
     )
     .fetch_one(&data.db)
     .await;
@@ -198,15 +206,21 @@ async fn test_calculate_distance(
         }
     }
 
+    // Convert the radicand into a IEEE 754 format
+    let r754: u32 = u32_to_ieee754_2nd(radicand as u32);
+
     // Compute the square root
-    let square_root = f32::sqrt(radicand as f32);
+    let sr: f32 = f32::sqrt(r754 as f32);
+
+    // Serialize the square root
+    let srs: Vec<u8> = serialize(&sr).unwrap();
 
     // Insert the square root into the table
     let query_result = sqlx::query_as!(
         PlaintextDistances,
         "INSERT INTO plaintextdistances (id, distance) VALUES ($1, $2)",
-        radicand,
-        square_root as f32
+        rs,
+        srs
     )
     .execute(&data.db)
     .await;
@@ -215,7 +229,7 @@ async fn test_calculate_distance(
         // Return the newly computed square root
         Ok(_) => {
             let response = serde_json::json!({"status": "success", "data": serde_json::json!({
-                "distance": square_root
+                "distance": srs
             })});
 
             return HttpResponse::Ok().json(response);
@@ -239,45 +253,57 @@ async fn calculate_distance_handler(
     body: web::Json<CiphertextCoordinatesSchema>,
     data: web::Data<AppState>,
 ) -> impl Responder {
+    // Deserialize the coordinations
+    let pax: FheInt32 = deserialize(&body.coordinate_a.x).unwrap();
+    let pay: FheInt32 = deserialize(&body.coordinate_a.y).unwrap();
+    let pbx: FheInt32 = deserialize(&body.coordinate_b.x).unwrap();
+    let pby: FheInt32 = deserialize(&body.coordinate_b.y).unwrap();
+
     // Select max and min from coordinates
-    let x1: FheInt32 = body.coordinate_a.x.min(&body.coordinate_b.x);
-    let x2: FheInt32 = body.coordinate_a.x.min(&body.coordinate_b.x);
-    let y1: FheInt32 = body.coordinate_a.y.min(&body.coordinate_b.y);
-    let y2: FheInt32 = body.coordinate_a.y.min(&body.coordinate_b.y);
+    let x1: FheInt32 = pax.min(&pbx);
+    let x2: FheInt32 = pay.min(&pbx);
+    let y1: FheInt32 = pay.min(&pby);
+    let y2: FheInt32 = pay.min(&pby);
 
     // Compute the radicand
-    let radicand: FheInt32 = (x2.clone() - x1.clone()) * (x2.clone() - x1.clone()) + (y2.clone() - y1.clone()) * (y2.clone() - y1.clone());
-    let encoded: Vec<u8> = bincode::serialize(&radicand).unwrap();
-    let encstr: String = String::from_utf8(encoded).expect("The byte stream should be UTF-8 encoded");
-    println!("{:#?}", encstr);
+    let r: FheInt32 = (x2.clone() - x1.clone()) * (x2.clone() - x1.clone()) + (y2.clone() - y1.clone()) * (y2.clone() - y1.clone());
+    
+    // Serialize the radicand);
+    let rs: Vec<u8> = serialize(&r).unwrap();
 
     // Search for the radicand
-    // let query_result = sqlx::query_as!(
-    //     CiphertextDistances,
-    //     "SELECT id, distance FROM plaintextdistances WHERE id = $1",
-    //     encoded
-    // )
-    // .fetch_one(&data.db)
-    // .await;
+    let query_result = sqlx::query_as!(
+        CiphertextDistances,
+        "SELECT id, distance FROM plaintextdistances WHERE id = $1",
+        rs
+    )
+    .fetch_one(&data.db)
+    .await;
 
-    // match query_result {
-    //     // Return the square root if it was already computed
-    //     Ok(value) => {
-    //         let response = serde_json::json!({"status": "success", "data": serde_json::json!({
-    //             "distance": value.distance
-    //         })});
+    match query_result {
+        // Return the square root if it was already computed
+        Ok(value) => {
+            let response = serde_json::json!({"status": "success", "data": serde_json::json!({
+                "distance": value.distance
+            })});
 
-    //         return HttpResponse::Ok().json(response);
-    //     }
+            return HttpResponse::Ok().json(response);
+        }
 
-    //     Err(e) => {
-    //         println!("{:?}", e.to_string());
-    //         if !e.to_string().contains("no rows returned by a query that expected to return at least one row") {
-    //             return HttpResponse::InternalServerError()
-    //             .json(serde_json::json!({"status": "error","message": format!("{:?}", e)}));
-    //         }
-    //     }
-    // }
+        Err(e) => {
+            println!("{:?}", e.to_string());
+            if !e.to_string().contains("no rows returned by a query that expected to return at least one row") {
+                return HttpResponse::InternalServerError()
+                .json(serde_json::json!({"status": "error","message": format!("{:?}", e)}));
+            }
+        }
+    }
+
+    // Convert the radicand into a IEEE 754 format
+    let r754: FheInt32 = fheint32_to_ieee754(&r);
+
+    // Compute the square root
+    // TODO:
 
     let response = serde_json::json!({
         "status": "success",

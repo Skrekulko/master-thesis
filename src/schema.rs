@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use tfhe::FheInt32;
 
 // --------------------------------
 // |    Ciphertext Coordinates    |
@@ -13,8 +12,8 @@ pub struct CiphertextCoordinatesSchema {
 
 #[derive(Serialize, Deserialize)]
 pub struct CiphertextCoordinate {
-    pub x: FheInt32,
-    pub y: FheInt32,
+    pub x: Vec<u8>,
+    pub y: Vec<u8>,
 }
 
 // -------------------------------
@@ -29,6 +28,6 @@ pub struct PlaintextCoordinatesSchema {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PlaintextCoordinate {
-    pub x: i32,
-    pub y: i32,
+    pub x: Vec<u8>,
+    pub y: Vec<u8>,
 }

@@ -7,8 +7,8 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, FromRow, Serialize, Deserialize)]
 pub struct CiphertextDistances {
-    pub id: Option<i32>,
-    pub distance: Option<i32>,
+    pub id: Option<Vec<u8>>,
+    pub distance: Option<Vec<u8>>,
 }
 
 // -------------------------------
@@ -17,6 +17,6 @@ pub struct CiphertextDistances {
 
 #[derive(Debug, FromRow, Serialize, Deserialize)]
 pub struct PlaintextDistances {
-    pub id: Option<i32>,
-    pub distance: Option<i32>,
+    pub id: Option<Vec<u8>>,
+    pub distance: Option<Vec<u8>>,
 }

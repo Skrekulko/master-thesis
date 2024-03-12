@@ -1,11 +1,11 @@
 CREATE SCHEMA IF NOT EXISTS postgres;
 
 CREATE TABLE IF NOT EXISTS postgres.CiphertextDistances (
-    id INT PRIMARY KEY,
-    distance INT
+    id BYTEA PRIMARY KEY,
+    distance BYTEA
 );
 
 CREATE TABLE IF NOT EXISTS postgres.PlaintextDistances (
-    id INT PRIMARY KEY,
-    distance INT
+    id BYTEA PRIMARY KEY,
+    distance BYTEA
 );
