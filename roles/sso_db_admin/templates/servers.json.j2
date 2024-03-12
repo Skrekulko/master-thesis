@@ -1,0 +1,14 @@
+{
+    "Servers": {
+        "1": {
+            "Name": "{{ sso_db_admin_db_name }}",
+            "Group": "{{ sso_db_admin_db_group }}",
+            "Port": {{ sso_db_admin_db_port }},
+            "Username": "{{ sso_db_admin_db_username }}",
+            "Host": "{{ sso_db_admin_db_host }}",
+            "SSLMode": "prefer",
+            "MaintenanceDB": "{{ sso_db_admin_db_maintenance_db }}",
+            "PassFile": "/pgadmin4/pgpass"
+        }
+    }
+}

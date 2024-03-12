@@ -1,0 +1,5 @@
+- name: Create PassFile
+  ansible.builtin.template:
+    src: pgpass.j2
+    dest: docker/sso_db_admin/pgpass
+    mode: "0600"

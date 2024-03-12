@@ -1,0 +1,24 @@
+- name: Create JSON file
+  ansible.builtin.template:
+    src: servers.json.j2
+    dest: docker/core_db_admin/servers.json
+    mode: "0644"
+
+- name: Read the existing JSON file
+  ansible.builtin.slurp:
+    src: docker/core_db_admin/servers.json
+  register: core_db_admin_json_content
+
+- name: Convert JSON content to a string
+  ansible.builtin.set_fact:
+    core_db_admin_json_string: "{{ core_db_admin_json_content['content'] | b64decode | string }}"
+
+- name: Pretty-format JSON string
+  ansible.builtin.set_fact:
+    core_db_admin_pretty_json: "{{ core_db_admin_json_string | from_json | to_nice_json }}"
+
+- name: Write the pretty-formatted JSON back to the file
+  ansible.builtin.copy:
+    content: "{{ core_db_admin_pretty_json }}"
+    dest: docker/core_db_admin/servers.json
+    mode: "0644"

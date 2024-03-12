@@ -1,7 +1,7 @@
 use tfhe::{prelude::*, FheBool, FheInt32, FheUint32};
 
 /*
-    IEEE 754 Extraction
+*   IEEE 754 Extraction
 */
 
 pub fn ieee754_extract_sign(input: u32) -> u32 {
@@ -13,7 +13,7 @@ pub fn ieee754_extract_exponent(input: u32) -> u32 {
 }
 
 pub fn ieee754_extract_mantissa(input: u32) -> u32 {
-    return input & 0x7FFFFF | 0x800000;
+    return input & 0x7FFFFF;
 }
 
 /*
@@ -21,6 +21,7 @@ pub fn ieee754_extract_mantissa(input: u32) -> u32 {
 */
 
 // The original algorithm
+// https://stackoverflow.com/questions/20302904/converting-int-to-float-or-float-to-int-using-bitwise-operations-software-float
 pub fn u32_to_ieee754(significand: u32) -> Option<u32> {
     // Only support 0 < significand < 1 << 24.
     if significand == 0 || significand >= 1 << 24 {
@@ -79,6 +80,9 @@ fn u32_calculate_shifts(input: u32, shifts: u32) -> u32 {
 
     return cloned_shifts;
 }
+
+// The second original algorithm
+// https://codegolf.stackexchange.com/questions/252936/convert-an-integer-to-ieee-754-float
 
 /*
 *   FheInt32

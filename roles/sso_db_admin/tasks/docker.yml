@@ -1,0 +1,13 @@
+- name: Create Dockerfile
+  ansible.builtin.template:
+    src: Dockerfile.j2
+    dest: docker/sso_db_admin/Dockerfile
+    mode: "0644"
+
+- name: Build the Docker image
+  community.docker.docker_image:
+    build:
+      path: docker/sso_db_admin
+    name: sso_db_admin
+    tag: latest
+    source: build

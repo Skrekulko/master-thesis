@@ -1,0 +1,14 @@
+# pgAdmin
+core_db_admin_default_email: pgadmin4@pgadmin.org
+core_db_admin_default_password: changeme
+core_db_admin_config_server_mode: "False"
+core_db_admin_core_db_admin_master_password_required: "False"
+
+# PostgreSQL
+core_db_admin_db_group: Servers
+core_db_admin_db_name: postgres
+core_db_admin_db_maintenance_db: postgres
+core_db_admin_db_host: core_db
+core_db_admin_db_port: 5432
+core_db_admin_db_username: postgres
+core_db_admin_db_password: changeme

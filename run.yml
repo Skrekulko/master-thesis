@@ -1,0 +1,14 @@
+- name: Deployment Playbook
+  hosts: localhost
+  # become: true
+
+  roles:
+    - pre_deployment
+    - core_db
+    - core_db_admin
+    - sso_db
+    - sso_db_admin
+    - sso
+    - proxy
+    - deployment
+    # - post_deployment

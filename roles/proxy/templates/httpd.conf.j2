@@ -1,0 +1,14 @@
+<IfModule auth_openidc_module>
+    OIDCProviderIssuer ${OIDC_PROVIDER}${OIDC_REALM}
+    OIDCProviderAuthorizationEndpoint ${OIDC_PROVIDER}${OIDC_REALM}/protocol/openid-connect/auth
+    OIDCProviderJwksUri ${OIDC_PROVIDER}${OIDC_REALM}/protocol/openid-connect/certs
+    OIDCProviderTokenEndpoint ${OIDC_PROVIDER}${OIDC_REALM}/protocol/openid-connect/token
+    OIDCProviderUserInfoEndpoint ${OIDC_PROVIDER}${OIDC_REALM}/protocol/openid-connect/userinfo
+    OIDCSSLValidateServer Off
+    OIDCRedirectURI http://${SERVER_NAME}/someuri/redirect_uri
+    OIDCCryptoPassphrase ${OIDC_CRYPT}
+    OIDCClientID ${OIDC_CLIENT}
+    OIDCClientSecret ${OIDC_SECRET}
+    OIDCRemoteUserClaim preferred_username
+    OIDCInfoHook userinfo
+</IfModule>

@@ -1,0 +1,3 @@
+sso_db_postgres_db: keycloak
+sso_db_postgres_user: postgres
+sso_db_postgres_password: changeme

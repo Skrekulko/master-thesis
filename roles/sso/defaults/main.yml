@@ -1,0 +1,5 @@
+sso_admin: kcadmin
+sso_admin_password: kcadmin
+sso_db_vendor: postgres
+sso_db_username: postgres
+sso_db_password: changeme

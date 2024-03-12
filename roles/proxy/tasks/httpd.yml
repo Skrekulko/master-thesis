@@ -1,0 +1,30 @@
+# - name: Get latest release of the public repository
+#   ansible.builtin.uri:
+#     url: "https://api.github.com/repos/{{ proxy_git_user }}/{{ proxy_git_repo }}/releases/latest"
+#     return_content: true
+#   register: proxy_response
+
+# - name: Loop through assets with bookworm in the URL
+#   ansible.builtin.debug:
+#     msg: "Found matching URL: {{ item }}"
+#   loop: "{{ response.json.assets | json_query('[?contains(browser_download_url, `bookworm`)].browser_download_url') | default([]) }}"
+#   loop_control:
+#     loop_var: item
+#   when: item is not undefined
+#   register: proxy_assets
+
+# - name: Set the download URL
+#   ansible.builtin.set_fact:
+#     proxy_download_url: "{{ assets.results[0].item }}"
+
+# - name: Download the package
+#   ansible.builtin.get_url:
+#     url: "{{ proxy_download_url }}"
+#     dest: docker/proxy/package.deb
+#     mode: "0644"
+
+- name: Create the httpd.conf
+  ansible.builtin.template:
+    src: httpd.conf.j2
+    dest: docker/proxy/httpd.conf
+    mode: "0600"

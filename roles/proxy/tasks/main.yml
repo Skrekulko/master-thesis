@@ -1,0 +1,5 @@
+- name: Include httpd tasks
+  ansible.builtin.include_tasks: httpd.yml
+
+- name: Include Docker tasks
+  ansible.builtin.include_tasks: docker.yml

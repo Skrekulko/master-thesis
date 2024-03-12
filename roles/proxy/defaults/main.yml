@@ -1,0 +1,4 @@
+proxy_oidc_provider: sso
+proxy_oidc_realm: master
+proxy_oidc_client: httpd
+proxy_oidc_secret: changeme

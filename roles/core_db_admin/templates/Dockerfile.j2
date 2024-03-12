@@ -1,0 +1,14 @@
+FROM dpage/pgadmin4:latest
+
+ENV PGADMIN_DEFAULT_EMAIL {{ core_db_admin_default_email }}
+ENV PGADMIN_DEFAULT_PASSWORD {{ core_db_admin_default_password }}
+ENV PGADMIN_CONFIG_SERVER_MODE {{ core_db_admin_config_server_mode }}
+ENV PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED {{ core_db_admin_core_db_admin_master_password_required }}
+
+WORKDIR /pgadmin4
+
+COPY ./servers.json .
+COPY ./pgpass .
+
+USER root
+RUN chown pgadmin:root /pgadmin4/pgpass

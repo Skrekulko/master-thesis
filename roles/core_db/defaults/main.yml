@@ -1,0 +1,3 @@
+core_db_postgres_db: postgres
+core_db_postgres_user: postgres
+core_db_postgres_password: changeme

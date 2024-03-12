@@ -1,0 +1,8 @@
+- name: Create a new OIDC client
+  community.general.keycloak_client:
+    auth_client_id: "{{ post_deployment_auth_client_id }}"
+    auth_keycloak_url: "{{ post_deployment_auth_keycloak_url }}"
+    auth_realm: "{{ post_deployment_auth_realm }}"
+    auth_username: "{{ post_deployment_auth_username }}"
+    auth_password: "{{ post_deployment_auth_password }}"
+    realm: "{{ post_deployment_realm }}"

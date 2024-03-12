@@ -1,0 +1,5 @@
+FROM postgres:latest
+
+ENV POSTGRES_DB={{ sso_db_postgres_db }}
+ENV POSTGRES_USER={{ sso_db_postgres_user }}
+ENV POSTGRES_PASSWORD={{ sso_db_postgres_password }}

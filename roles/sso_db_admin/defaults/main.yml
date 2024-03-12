@@ -1,0 +1,14 @@
+# pgAdmin
+sso_db_admin_default_email: pgadmin4@pgadmin.org
+sso_db_admin_default_password: changeme
+sso_db_admin_config_server_mode: "False"
+sso_db_admin_sso_db_admin_master_password_required: "False"
+
+# PostgreSQL
+sso_db_admin_db_group: Servers
+sso_db_admin_db_name: postgres
+sso_db_admin_db_maintenance_db: postgres
+sso_db_admin_db_host: sso_db
+sso_db_admin_db_port: 5432
+sso_db_admin_db_username: postgres
+sso_db_admin_db_password: changeme

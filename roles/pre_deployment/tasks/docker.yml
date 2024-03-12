@@ -1,0 +1,11 @@
+- name: Kill, remove and wipe containers/volumes
+  ansible.builtin.command:
+    cmd: "docker compose rm --force --stop --volumes"
+    chdir: "docker/deployment"
+  changed_when: false
+
+- name: Prune existing docker images
+  ansible.builtin.command:
+    cmd: "docker image prune --all --force"
+    chdir: "docker/deployment"
+  changed_when: false

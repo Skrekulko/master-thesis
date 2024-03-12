@@ -1,0 +1,8 @@
+- name: Include JSON tasks
+  ansible.builtin.include_tasks: json.yml
+
+- name: Include PassFile tasks
+  ansible.builtin.include_tasks: pgpass.yml
+
+- name: Include Docker tasks
+  ansible.builtin.include_tasks: docker.yml

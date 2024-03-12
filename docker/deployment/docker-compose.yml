@@ -1,0 +1,69 @@
+version: '3.8'
+services:
+  core_db:
+    image: core_db:latest
+    container_name: core-db-container
+    ports:
+      - "15432:5432"
+    networks:
+      - pg_network
+    restart: always
+
+  core_db_admin:
+    image: core_db_admin:latest
+    container_name: core-db-admin-container
+    ports:
+      - "5050:80"
+    networks:
+      - pg_network
+    restart: always
+    depends_on:
+      - core_db
+
+  sso_db:
+    image: sso_db:latest
+    container_name: sso-db-container
+    ports:
+      - "25432:5432"
+    networks:
+      - pg_network
+    restart: always
+
+  sso_db_admin:
+    image: sso_db_admin:latest
+    container_name: sso-db-admin-container
+    ports:
+      - "5051:80"
+    networks:
+      - pg_network
+    restart: always
+    depends_on:
+      - sso_db
+
+  sso:
+    image: sso:latest
+    container_name: sso-container
+    ports:
+      - "8080:8080"
+    networks:
+      - pg_network
+    restart: always
+    depends_on:
+      - sso_db
+
+  proxy:
+    image: proxy:latest
+    container_name: proxy-container
+    ports:
+      - "80:80"
+      - "443:443"
+    networks:
+      - pg_network
+    restart: always
+    depends_on:
+      # - core
+      - sso
+
+networks:
+  pg_network:
+    driver: bridge
