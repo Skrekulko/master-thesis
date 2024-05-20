@@ -1,2 +1,5 @@
 - name: Include Docker tasks
   ansible.builtin.include_tasks: docker.yml
+
+- name: Include Keycloak tasks
+  ansible.builtin.include_tasks: keycloak.yml

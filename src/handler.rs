@@ -6,6 +6,7 @@ use crate::{
     schema::PlaintextCoordinatesSchema,
     schema::CiphertextCoordinatesSchema,
     ieee754::u32_to_ieee754_2nd,
+    sqrt::fsqrt,
 };
 
 use actix_web::{get, post, delete, web, HttpResponse, Responder};
@@ -303,7 +304,7 @@ async fn calculate_distance_handler(
     let r754: FheInt32 = fheint32_to_ieee754(&r);
 
     // Compute the square root
-    // TODO:
+    // let roo: FheInt32 = fsqrt(r754);
 
     let response = serde_json::json!({
         "status": "success",
