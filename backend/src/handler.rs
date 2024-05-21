@@ -14,6 +14,7 @@ use serde_json::json;
 use bincode::{serialize, deserialize};
 use tfhe::prelude::*;
 use tfhe::FheInt32;
+use sha2::{Sha256, Digest};
 
 // ----------------------
 // |    Health Check    |
@@ -132,7 +133,7 @@ async fn admin_wipe_test_handler(
         Ok(_) => {
             let response = serde_json::json!({
                 "status": "success",
-                "message": "Table cachedcalculations wiped"
+                "message": "Table plaintextdistances wiped"
             });
 
             return HttpResponse::Ok().json(response);
@@ -152,15 +153,6 @@ async fn test_calculate_distance(
     body: web::Json<PlaintextCoordinatesSchema>,
     data: web::Data<AppState>,
 ) -> impl Responder {
-    // TODO: this should be done on the client's side
-    // Validate the incoming data
-    // if body.coordinate_a.x < 0 || body.coordinate_a.y < 0 || body.coordinate_b.x < 0 || body.coordinate_b.y < 0 {
-    //     return HttpResponse::BadRequest().json(json!({
-    //         "status": "error",
-    //         "message": "Invalid input. Values must be greater than or equal to 0."}
-    //     ));
-    // }
-
     // Unwrap the Vector of bytes into 4 byte array and convert into a i32
     let pax: i32 = deserialize(&body.coordinate_a.x).unwrap();
     let pay: i32 = deserialize(&body.coordinate_a.y).unwrap();
@@ -188,14 +180,28 @@ async fn test_calculate_distance(
     .fetch_one(&data.db)
     .await;
 
+    // Create a Sha256 object
+    let mut hasher = Sha256::new();
+
     match query_result {
         // Return the square root if it was already computed
         Ok(value) => {
-            let response = serde_json::json!({"status": "success", "data": serde_json::json!({
-                "distance": value.distance
-            })});
-
-            return HttpResponse::Ok().json(response);
+            if let Some(ref distance) = value.distance {
+                // Write input data
+                hasher.update(distance);
+                let digest = hasher.finalize();
+    
+                let response = serde_json::json!({"
+                    status": "success",
+                    "data": serde_json::json!({
+                        "distance": value.distance.clone(),
+                        "digest": digest[..],
+                        "comment": "precalculated"
+                    })
+                });
+    
+                return HttpResponse::Ok().json(response);
+            }
         }
 
         Err(e) => {
@@ -208,7 +214,8 @@ async fn test_calculate_distance(
     }
 
     // Convert the radicand into a IEEE 754 format
-    let r754: u32 = u32_to_ieee754_2nd(radicand as u32);
+    // let r754: u32 = u32_to_ieee754_2nd(radicand as u32);
+    let r754: u32 = radicand as u32;
 
     // Compute the square root
     let sr: f32 = f32::sqrt(r754 as f32);
@@ -229,9 +236,18 @@ async fn test_calculate_distance(
     match query_result {
         // Return the newly computed square root
         Ok(_) => {
-            let response = serde_json::json!({"status": "success", "data": serde_json::json!({
-                "distance": srs
-            })});
+            // Write input data
+            hasher.update(&srs);
+            let digest = hasher.finalize();
+
+            let response = serde_json::json!({"
+                status": "success",
+                "data": serde_json::json!({
+                    "distance": srs,
+                    "digest": digest[..],
+                    "comment": "calculated"
+                })
+            });
 
             return HttpResponse::Ok().json(response);
         }

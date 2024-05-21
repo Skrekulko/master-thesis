@@ -58,32 +58,6 @@ pub fn isqrt_homo(x: &FheUint64) -> FheInt64 {
     return b.cast_into();
 }
 
-
-// pub fn fsqrt_homo(ieee754: FheInt64) -> FheInt64 {
-//     // Extract IEEE 754 Parts
-//     // let sign: FheInt64 = ieee754.clone() >> 31u64; // TODO: is this necessary?
-//     let exponent: FheInt64 = (ieee754.clone() >> IEEE754_MANTISSA_SIZE) - 127;
-//     let mantissa: FheInt64 = ieee754.clone() & 0x7FFFFF;
-
-//     // Calculate stuff
-//     let common_one: FheInt64 = (ieee754.clone() | 0x80000000) >> 31u64;
-//     let hidden_bit: FheInt64 = common_one.clone() << IEEE754_MANTISSA_SIZE;
-//     let normalized_mantissa: FheInt64 = mantissa.clone() | hidden_bit.clone();
-//     let big_n: FheInt64 = (exponent.clone() % 2).eq(&common_one).if_then_else(
-//         &(normalized_mantissa.clone() << (IEEE754_MANTISSA_SIZE + 1)),
-//         &(normalized_mantissa.clone() << IEEE754_MANTISSA_SIZE)
-//     );
-//     let new_exponent: FheInt64 = (exponent.clone() % 2).eq(&common_one).if_then_else(
-//         &(exponent.clone() - 1),
-//         &exponent.clone()
-//     );
-//     let first_root: u64 = isqrt_homo(&big_n);
-//     let base_exponent: FheInt64 = (127 + (new_exponent.clone() >> 1u64)) << IEEE754_MANTISSA_SIZE;
-//     let root: FheInt64 = base_exponent | first_root as i64;
-
-//     return root;
-// }
-
 /*
 *   u32
 */
