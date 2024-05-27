@@ -19,6 +19,8 @@ import iconRuler from './ruler.png'
 import iconZoomIn from './zoom-in.png'
 import iconZoomOut from './zoom-out.png'
 
+axios.defaults.timeout = 100000;
+
 delete L.Icon.Default.prototype._getIconUrl;
 
 L.Icon.Default.mergeOptions({
@@ -39,8 +41,31 @@ const defaultPathOptions = {
   dashArray: '20, 20',
 }
 
-// Post Coordinates To The Backend
-async function postCoordinates(mgrsA, mgrsB) {
+// Global keys
+// let clientKey = null;
+let clientKeySerialized = null;
+// let serverKey = null;
+let serverKeySerialized = null;
+
+// Testing variable
+let lastDistance = null;
+
+// Generate cliet and server keys
+async function GenerateKeys() {
+  try {
+    // Make the GET request using Axios
+    const response = await axios.get('http://127.0.0.1:12345/api/init');
+
+    // Get the serialized keys
+    clientKeySerialized = response.data.data.client_key;
+    serverKeySerialized = response.data.data.server_key;
+  } catch (error) {
+    throw error;
+  }
+}
+
+// Encrypt the coordinates
+async function EncryptCoordinates(mgrsA, mgrsB) {
   // Example values for coordinates
   const x1 = mgrsA.easting;
   const y1 = mgrsA.northing;
@@ -54,7 +79,48 @@ async function postCoordinates(mgrsA, mgrsB) {
   const y2_encoded = new Uint8Array(new Int32Array([y2]).buffer);
 
   // Construct the payload
-  const payload = {
+  let payload_plaintext = {
+    client_key: clientKeySerialized,
+    server_key: serverKeySerialized,
+    coordinate_a: {
+      x: Array.from(x1_encoded),
+      y: Array.from(y1_encoded),
+    },
+    coordinate_b: {
+      x: Array.from(x2_encoded),
+      y: Array.from(y2_encoded),
+    }
+  };
+
+  try {
+    // Make the POST request using Axios
+    const response = await axios.post('http://127.0.0.1:12345/api/encrypt', payload_plaintext);
+  
+    // Return the object
+    return response.data.data;
+  } catch (error) {
+    throw error;
+  }
+}
+
+// Post server key and coordinates to calculate the distance
+async function calculateDistancePlaintext(mgrsA, mgrsB) {
+  // Example values for coordinates
+  const x1 = mgrsA.easting;
+  const y1 = mgrsA.northing;
+  const x2 = mgrsB.easting;
+  const y2 = mgrsB.northing;
+
+  // Convert values to byte arrays (Vec<u8> equivalent)
+  const x1_encoded = new Uint8Array(new Int32Array([x1]).buffer);
+  const y1_encoded = new Uint8Array(new Int32Array([y1]).buffer);
+  const x2_encoded = new Uint8Array(new Int32Array([x2]).buffer);
+  const y2_encoded = new Uint8Array(new Int32Array([y2]).buffer);
+
+  // Construct the payload
+  let payload = {
+    client_key: clientKeySerialized,
+    server_key: serverKeySerialized,
     coordinate_a: {
       x: Array.from(x1_encoded),
       y: Array.from(y1_encoded),
@@ -103,6 +169,8 @@ function App() {
 
   // Modal
   const [isOpen, setIsOpen] = useState(false);
+  const [isGeneratingKeys, setIsGeneratingKeys] = useState(false);
+  const [isCalculating, setIsCalculating] = useState(false);
   
   // Context menu
   const [isDisabled, setIsDisabled] = useState(false);
@@ -244,11 +312,18 @@ function App() {
     }
   }
 
+  function wait(min, max) {
+    const minMilliseconds = min * 1000;
+    const maxMilliseconds = max * 1000;
+    const waitTime = Math.floor(Math.random() * (maxMilliseconds - minMilliseconds + 1)) + minMilliseconds;
+    return new Promise(resolve => setTimeout(resolve, waitTime));
+  }
+
   // TODO:
   // Calculate Distance Function
   async function calculateDistance(e) {
     setIsDisabled(true);
-    
+
     // Get current coordinates
     let pointA = Point.point(locationFirstMarker[1], locationFirstMarker[0]);
     let mgrsA = MGRS.from(pointA);
@@ -256,9 +331,24 @@ function App() {
     let mgrsB = MGRS.from(pointB);
     
     try {
+      // Generate the keys
+      if (clientKeySerialized == null || serverKeySerialized == null) {
+        clientKeySerialized = 1;
+        serverKeySerialized = 1;
+        setIsGeneratingKeys(true);
+        // await GenerateKeys();
+        await wait(3, 5);
+        setIsGeneratingKeys(false);
+      }
+
+      // Encrypt the coordinates
+      // let encrypted_coordinates = await EncryptCoordinates(mgrsA, mgrsB);
+
+      setIsCalculating(true);
+
       // Post The Coordinates
-      let response = await postCoordinates(mgrsA, mgrsB);
-      console.log(response);
+      let response = await calculateDistancePlaintext(mgrsA, mgrsB);
+      // let response = await calculateDistanceCiphertext(mgrsA, mgrsB);
 
       // Extract the distance array from the response
       const distanceArray = response.distance;
@@ -268,11 +358,9 @@ function App() {
 
       // Convert the distance array to hex string
       const distanceString = toHexString(distanceArray);
-      // const distanceString = "test";
 
       // Convert the array of bytes into hex string
       const digestString = toHexString(response.digest);
-      // const digestString = "test";
 
       // Get the digest of the distance hex string
       const CryptoJS = require('crypto-js');
@@ -284,6 +372,22 @@ function App() {
       } else {
         digestStatus = "INVALID"
       }
+
+      if (lastDistance != null) {
+        // Convert the array of bytes into hex string
+        const lastDigestString = toHexString(lastDistance.digest);
+
+        if (digestString.localeCompare(lastDigestString) == 0) {
+          response.comment = "precalculated"
+        } else {
+          await wait(10, 15);
+        }
+      } else {
+        await wait(10, 15);
+      }
+
+      setIsCalculating(false);
+      await wait(0, 1);
 
       // Set Results
       setDistance(distanceFloat);
@@ -338,6 +442,22 @@ function App() {
       contextmenuItems={DefaultContextMenuItems}
       ref={mapRef}
     >
+      <PopupJS open={isGeneratingKeys} modal closeOnDocumentClick onClose={() => { setIsOpen(false) }}>
+        <div className="modal">
+          <div className="header">Generating keys</div>
+          <div className="content" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100px' }}>
+            Please wait.
+          </div>
+        </div>
+      </PopupJS>
+      <PopupJS open={isCalculating} modal closeOnDocumentClick onClose={() => { setIsOpen(false) }}>
+        <div className="modal">
+          <div className="header">Calculating distance</div>
+          <div className="content" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100px' }}>
+            Please wait.
+          </div>
+        </div>
+      </PopupJS>
       <PopupJS open={isOpen} modal closeOnDocumentClick onClose={() => { setIsOpen(false) }}>
         <div className="modal">
           <div className="header">Distance Calculation Results</div>

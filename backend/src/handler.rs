@@ -12,7 +12,7 @@ use crate::{
 use actix_web::{get, post, delete, web, HttpResponse, Responder};
 use serde_json::json;
 use bincode::{serialize, deserialize};
-use tfhe::prelude::*;
+use tfhe::{generate_keys, prelude::*, set_server_key, ClientKey, ConfigBuilder, ServerKey};
 use tfhe::FheInt32;
 use sha2::{Sha256, Digest};
 
@@ -149,7 +149,7 @@ async fn admin_wipe_test_handler(
 }
 
 #[post("/admin/calc/dist")]
-async fn test_calculate_distance(
+async fn calculate_distance_plaintext(
     body: web::Json<PlaintextCoordinatesSchema>,
     data: web::Data<AppState>,
 ) -> impl Responder {
@@ -264,12 +264,83 @@ async fn test_calculate_distance(
 // |    Production Endpoints    |
 // ------------------------------
 
+// Generate and return a new pair of keys
+#[get("/init")]
+async fn initialize_keys() -> impl Responder {
+    // Generate new pair of keys
+    let config = ConfigBuilder::default().build();
+    let (client_key, server_key) = generate_keys(config);
+    
+    // Serialize the keys
+    let client_key_serialized: Vec<u8> = serialize(&client_key).unwrap();
+    let server_key_serialized: Vec<u8> = serialize(&server_key).unwrap();
+
+    // JSON the keys and return them
+    let response = serde_json::json!({
+        "status": "success",
+        "data": serde_json::json!({
+            "client_key": client_key_serialized,
+            "server_key": server_key_serialized,
+        })
+    });
+
+    return HttpResponse::Ok().json(response);
+}
+
+// Generate and return a new pair of keys
+#[post("/encrypt")]
+async fn encrypt(
+    body: web::Json<CiphertextCoordinatesSchema>,
+) -> impl Responder {
+    // Deserialize the server key
+    let client_key: ClientKey = deserialize(&body.client_key).unwrap();
+
+    // Unwrap the Vector of bytes into 4 byte array and convert into a i32
+    let x1: i32 = deserialize(&body.coordinate_a.x).unwrap();
+    let y1: i32 = deserialize(&body.coordinate_a.y).unwrap();
+    let x2: i32 = deserialize(&body.coordinate_b.x).unwrap();
+    let y2: i32 = deserialize(&body.coordinate_b.y).unwrap();
+    
+    // Encrypt the values
+    let x1_encrypted: FheInt32 = FheInt32::encrypt(x1, &client_key);
+    let y1_encrypted: FheInt32 = FheInt32::encrypt(y1, &client_key);
+    let x2_encrypted: FheInt32 = FheInt32::encrypt(x2, &client_key);
+    let y2_encrypted: FheInt32 = FheInt32::encrypt(y2, &client_key);
+
+    // Serialize the encrypted values
+    let x1_serialized: Vec<u8> = serialize(&x1_encrypted).unwrap();
+    let y1_serialized: Vec<u8> = serialize(&y1_encrypted).unwrap();
+    let x2_serialized: Vec<u8> = serialize(&x2_encrypted).unwrap();
+    let y2_serialized: Vec<u8> = serialize(&y2_encrypted).unwrap();
+
+    // JSON the keys and return them
+    let response = serde_json::json!({
+        "status": "success",
+        "data": serde_json::json!({
+            "coordinate_a": {
+                "x": x1_serialized,
+                "y": y1_serialized,
+            },
+            "coordinate_b": {
+                "x": x2_serialized,
+                "y": y2_serialized,
+            },
+        })
+    });
+
+    return HttpResponse::Ok().json(response);
+}
+
 // TODO: continue this
 #[post("/calc/dist")]
-async fn calculate_distance_handler(
+async fn calculate_distance_ciphertext(
     body: web::Json<CiphertextCoordinatesSchema>,
     data: web::Data<AppState>,
 ) -> impl Responder {
+    // Deserialize the server key and set it
+    let server_key: ServerKey = deserialize(&body.server_key).unwrap();
+    set_server_key(server_key);
+
     // Deserialize the coordinations
     let pax: FheInt32 = deserialize(&body.coordinate_a.x).unwrap();
     let pay: FheInt32 = deserialize(&body.coordinate_a.y).unwrap();
@@ -344,8 +415,10 @@ pub fn config(conf: &mut web::ServiceConfig) {
         .service(admin_wipe_handler)
         .service(admin_dump_test_handler)
         .service(admin_wipe_test_handler)
-        .service(test_calculate_distance);
-        // .service(calculate_distance_handler);
+        .service(calculate_distance_plaintext)
+        .service(initialize_keys)
+        .service(encrypt)
+        .service(calculate_distance_ciphertext);
 
     conf.service(scope);
 }

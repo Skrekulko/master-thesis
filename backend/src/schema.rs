@@ -6,6 +6,8 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
 pub struct CiphertextCoordinatesSchema {
+    pub client_key: Vec<u8>,
+    pub server_key: Vec<u8>,
     pub coordinate_a: CiphertextCoordinate,
     pub coordinate_b: CiphertextCoordinate,
 }
